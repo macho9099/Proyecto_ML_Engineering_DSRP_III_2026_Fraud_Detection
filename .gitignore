@@ -1,0 +1,32 @@
+# --- Datos crudos (pesados, no se versionan) ---
+data/raw/*.csv
+data/raw/*.zip
+!data/raw/.gitkeep
+
+# --- Entornos virtuales ---
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# --- MLflow local ---
+mlruns/
+mlartifacts/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Evidently / reportes generados pesados ---
+app/reports/*.html
+!app/reports/.gitkeep
+
+# --- Credenciales / entorno ---
+.env
+kaggle.json
+
+# --- Sistema operativo / editores ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
