@@ -202,10 +202,11 @@ Implementada en
 
 ## i. MLflow — experimentos
 
-Tracking **local** por defecto (`./mlruns`, backend file-based):
+Tracking **local** por defecto (SQLite: el backend de archivos plano
+`./mlruns` quedo en modo mantenimiento desde MLflow 3.x):
 
 ```bash
-mlflow ui --backend-store-uri ./mlruns
+mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
 El codigo (`src/tracking.py`) lee `MLFLOW_TRACKING_URI` desde el entorno,
@@ -263,7 +264,7 @@ streamlit run app/monitoring_app.py
 ├── artifacts/models/        # modelo entrenado serializado
 ├── model_card/model_card.md
 ├── reports/                 # figuras (SHAP, matriz de confusion, etc.)
-└── mlruns/                  # tracking local de MLflow (gitignored)
+└── mlflow.db                # tracking local de MLflow, SQLite (gitignored)
 ```
 
 ## l. Estrategia de Git
@@ -308,7 +309,7 @@ export RAW_DATA_PATH=/ruta/a/tu/archivo.csv   # Windows: set RAW_DATA_PATH=...
 jupyter lab notebooks/
 
 # 5. Ver experimentos de MLflow
-mlflow ui --backend-store-uri ./mlruns
+mlflow ui --backend-store-uri sqlite:///mlflow.db
 
 # 6. Levantar la app de monitoreo
 streamlit run app/monitoring_app.py
