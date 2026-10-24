@@ -3,6 +3,14 @@ data/raw/*.csv
 data/raw/*.zip
 !data/raw/.gitkeep
 
+# --- Datos procesados pesados (regenerables con notebooks/1.0-...) ---
+# Sobre el dataset completo, reference.csv/production*.csv pesan cientos de
+# MB -- no se versionan. Si un artefacto derivado es chico (p.ej. un resumen
+# de metricas), se puede excluir aqui de este patron para si versionarlo.
+data/processed/*.csv
+!data/processed/.gitkeep
+!data/processed/performance_drift_over_time.csv
+
 # --- Entornos virtuales ---
 .venv/
 venv/
@@ -13,13 +21,21 @@ __pycache__/
 # --- MLflow local ---
 mlruns/
 mlartifacts/
+mlflow.db
 
 # --- Jupyter ---
 .ipynb_checkpoints/
 
 # --- Evidently / reportes generados pesados ---
 app/reports/*.html
+app/reports/*.png
 !app/reports/.gitkeep
+
+# --- Artefactos de modelo y figuras regenerables (notebooks 2 y 3) ---
+artifacts/models/*.pkl
+!artifacts/models/.gitkeep
+reports/*.png
+!reports/.gitkeep
 
 # --- Credenciales / entorno ---
 .env

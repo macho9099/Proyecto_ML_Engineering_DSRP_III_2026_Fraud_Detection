@@ -17,8 +17,12 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 import streamlit as st
-from evidently.metric_preset import DataDriftPreset
-from evidently.report import Report
+
+# Nota: en evidently >= 0.6 la API "clasica" (Report + metric_preset) vive
+# bajo el namespace evidently.legacy; es el shim oficial de compatibilidad
+# hacia atras, mismo API que se vio en el curso (Sesion 9-10).
+from evidently.legacy.metric_preset import DataDriftPreset
+from evidently.legacy.report import Report
 
 from src.config import PROCESSED_DIR, REFERENCE_DATA_PATH, TARGET_COL
 from src.features import select_model_features
@@ -38,7 +42,10 @@ def load_data():
 def drift_table(reference: pd.DataFrame, current: pd.DataFrame, features: list[str]) -> pd.DataFrame:
     report = Report(metrics=[DataDriftPreset()])
     report.run(reference_data=reference[features], current_data=current[features])
-    result = report.as_dict()["metrics"][0]["result"]
+    # DataDriftPreset expande a 2 metricas (DatasetDriftMetric + DataDriftTable);
+    # la tabla por columna vive en la que trae "drift_by_columns".
+    metrics_dict = report.as_dict()["metrics"]
+    result = next(m["result"] for m in metrics_dict if "drift_by_columns" in m["result"])
 
     rows = []
     for feature, info in result["drift_by_columns"].items():

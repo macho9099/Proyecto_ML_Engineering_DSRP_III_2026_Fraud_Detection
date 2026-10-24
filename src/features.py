@@ -62,5 +62,13 @@ def select_model_features(df: pd.DataFrame) -> list[str]:
 
 
 def build_dummies(df: pd.DataFrame) -> pd.DataFrame:
-    """One-hot encoding de `type` (CASH-IN, CASH-OUT, DEBIT, PAYMENT, TRANSFER)."""
-    return pd.get_dummies(df, columns=["type"], prefix="type")
+    """One-hot encoding de `type` (CASH-IN, CASH-OUT, DEBIT, PAYMENT, TRANSFER).
+
+    `pd.get_dummies` genera columnas dtype `bool` desde pandas 2.x; se
+    castean a `int` (0/1) para evitar valores `True`/`False` aguas abajo
+    (p.ej. DiCE los serializa a texto y rompe la prediccion de XGBoost).
+    """
+    dummies = pd.get_dummies(df, columns=["type"], prefix="type")
+    dummy_cols = [c for c in dummies.columns if c.startswith("type_")]
+    dummies[dummy_cols] = dummies[dummy_cols].astype(int)
+    return dummies

@@ -28,7 +28,8 @@ DROP_COLS = ["isFlaggedFraud", "nameOrig", "nameDest"]  # se descartan tras deri
 CATEGORICAL_COLS = ["type"]
 
 # --- MLflow ---
-# Local por defecto; para apuntar a DagsHub en el futuro solo hace falta
-# exportar MLFLOW_TRACKING_URI (y credenciales) sin tocar el codigo.
-MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", f"file:{ROOT_DIR / 'mlruns'}")
+# Local por defecto (SQLite: el backend de archivos "./mlruns" quedo en modo
+# mantenimiento desde MLflow 3.x). Para apuntar a DagsHub en el futuro solo
+# hace falta exportar MLFLOW_TRACKING_URI (y credenciales) sin tocar el codigo.
+MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", f"sqlite:///{ROOT_DIR / 'mlflow.db'}")
 MLFLOW_EXPERIMENT_NAME = os.environ.get("MLFLOW_EXPERIMENT_NAME", "fraud-detection-paysim")
