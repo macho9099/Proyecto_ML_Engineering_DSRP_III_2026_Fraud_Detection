@@ -68,7 +68,8 @@ flowchart TD
     end
 
     subgraph TRAIN["2. Entrenamiento\nnotebooks/2.0-entrenamiento-modelo.ipynb"]
-        D1[Train/test split estratificado]
+        D0[Train/test split estratificado]
+        D1[Balanceo de clases\nReweighing vs. Oversampling\nSesion 8]
         D2[Baseline: Logistic Regression]
         D3[HPO: Random Search vs. Optuna\nXGBoost]
         D4[Modelo campeon]
@@ -100,7 +101,7 @@ flowchart TD
     A1 --> B1 --> B2 --> B3
     B3 --> C1
     B3 --> C2
-    C1 --> D1 --> D2
+    C1 --> D0 --> D1 --> D2
     D1 --> D3 --> D4
     D4 --> G1 & G2
     D4 --> E1
@@ -132,8 +133,26 @@ Implementadas y comparadas en
 |---|---|
 | **Random Search** (`RandomizedSearchCV`, Sesion 3) | Baseline de busqueda de hiperparametros para `XGBClassifier`. |
 | **Optimizacion Bayesiana** (`optuna`, Sesion 4) | Busqueda guiada por un modelo probabilistico del espacio de hiperparametros (TPE); se compara contra Random Search y se elige el mejor (`champion`). |
-| `scale_pos_weight` | Compensa el desbalance de clases dentro del propio algoritmo (alternativa a oversampling, ver Sesion 8). |
 | `StratifiedKFold` (CV) | Validacion cruzada estratificada durante la optimizacion, para no sesgar por el desbalance. |
+
+### Balanceo de clases (Sesion 8)
+
+El target (`isFraud`) esta fuertemente desbalanceado (~0.1-0.3% positivos).
+En vez de usar atajos no vistos en el curso (`scale_pos_weight`,
+`class_weight="balanced"`) o librerias externas (`imbalanced-learn`/SMOTE),
+se generalizan las dos tecnicas de la Sesion 8 (`mod0_Reweighing.ipynb`,
+`mod1_Oversampling.ipynb`) — pensadas ahi para equilibrar un grupo
+sensible — al desbalance de la clase objetivo (ver
+[`src/balancing.py`](src/balancing.py)):
+
+| Tecnica | Mecanica (igual que en el curso) |
+|---|---|
+| **Reweighing** | Pesos pasados como `sample_weight` a `.fit()`, inversamente proporcionales a la frecuencia de cada clase. |
+| **Oversampling** | Duplicar con reemplazo la clase minoritaria via `sklearn.utils.resample`. |
+
+Ambas se comparan en el notebook (seccion 2.1) con un holdout simple y
+`RandomForestClassifier` — igual que en la Sesion 8 — y se elige la de
+mejor PR-AUC para usarse en el resto del entrenamiento (baseline + HPO).
 
 ## e. Model Card
 
