@@ -2,7 +2,6 @@ pandas>=2.2,<3.0
 numpy>=1.26
 scikit-learn>=1.4
 xgboost>=2.0
-optuna>=3.6
 shap>=0.45
 lime>=0.2.0.1
 dice-ml>=0.11
