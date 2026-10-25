@@ -149,9 +149,14 @@ sensible — al desbalance de la clase objetivo (ver
 | **Reweighing** | Pesos pasados como `sample_weight` a `.fit()`, inversamente proporcionales a la frecuencia de cada clase. |
 | **Oversampling** | Duplicar con reemplazo la clase minoritaria via `sklearn.utils.resample`. |
 
-Ambas se comparan en el notebook (seccion 2.1) con un holdout simple y
-`RandomForestClassifier` — igual que en la Sesion 8 — y se elige la de
-mejor PR-AUC para usarse en el resto del entrenamiento (baseline + HPO).
+Ambas se comparan en el notebook (seccion 2.1) con `RandomForestClassifier`
+(igual que en la Sesion 8) sobre **5-fold `StratifiedKFold`**, aplicando el
+balanceo *dentro* de cada fold de entrenamiento — nunca antes del split —
+para no filtrar informacion entre train y validacion (critico para
+oversampling: sobremuestrear antes de dividir en folds dejaria copias casi
+identicas de una misma fila repartidas entre train y validacion). Se elige
+la estrategia con mejor PR-AUC promedio para usarse en el resto del
+entrenamiento (baseline + HPO).
 
 ## e. Model Card
 
