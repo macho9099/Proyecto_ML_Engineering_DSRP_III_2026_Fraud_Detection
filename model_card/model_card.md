@@ -10,7 +10,7 @@ Formato inspirado en [Kaggle Model Cards](https://www.kaggle.com/code/var0101/mo
 | Fecha | _(completar tras el entrenamiento final)_ |
 | Tipo de modelo | `XGBClassifier` (gradient boosted trees), binario |
 | Version | v1.0.0 |
-| Hiperparametros | Optimizados con Random Search + Optuna (bayesiana) — ver `notebooks/2.0-entrenamiento-modelo.ipynb` y el experimento registrado en MLflow |
+| Hiperparametros | Optimizados con Random Search (`RandomizedSearchCV`) — ver `notebooks/2.0-entrenamiento-modelo.ipynb` y el experimento registrado en MLflow |
 | Licencia | MIT (ver `LICENSE`) |
 
 ## 2. Uso previsto
