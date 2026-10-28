@@ -27,6 +27,33 @@ TARGET_COL = "isFraud"
 DROP_COLS = ["isFlaggedFraud", "nameOrig", "nameDest"]  # se descartan tras derivar features
 CATEGORICAL_COLS = ["type"]
 
+# dtypes explicitos para leer reference.csv/production.csv: sobre el dataset
+# completo (~5.8M filas de referencia) el default de pandas (float64/int64)
+# practicamente duplica el uso de memoria vs. float32/int8. Columnas nuevas
+# que no esten aqui (p.ej. fraud_proba/fraud_pred agregadas en el notebook
+# de entrenamiento) se infieren normalmente -- pd.read_csv(dtype=...) solo
+# aplica el tipo a las columnas presentes en el dict.
+PROCESSED_DTYPES = {
+    "step": "int32",
+    "amount": "float32",
+    "oldbalanceOrg": "float32",
+    "newbalanceOrig": "float32",
+    "oldbalanceDest": "float32",
+    "newbalanceDest": "float32",
+    "isFraud": "int8",
+    "errorBalanceOrig": "float32",
+    "errorBalanceDest": "float32",
+    "amountToOldBalanceOrgRatio": "float32",
+    "origAccountEmptied": "int8",
+    "isDestMerchant": "int8",
+    "destBalanceUnknown": "int8",
+    "type_CASH_IN": "int8",
+    "type_CASH_OUT": "int8",
+    "type_DEBIT": "int8",
+    "type_PAYMENT": "int8",
+    "type_TRANSFER": "int8",
+}
+
 # --- MLflow ---
 # Local por defecto (SQLite: el backend de archivos "./mlruns" quedo en modo
 # mantenimiento desde MLflow 3.x). Para apuntar a DagsHub en el futuro solo

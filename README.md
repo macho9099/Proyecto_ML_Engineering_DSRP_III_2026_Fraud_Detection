@@ -4,11 +4,14 @@
 > (cohorte 2026). Deteccion de fraude en transacciones de dinero movil
 > (dataset simulado **PaySim**).
 
-> **Estado del proyecto:** scaffolding completo (notebooks, src, app,
-> documentacion). Pendiente ejecutar el pipeline con el dataset real
-> (`PS_20174392719_1491204439457_log.csv`) para poblar metricas, graficos
-> de interpretabilidad y reportes de drift reales. Ver seccion
-> [Como reproducir](#como-reproducir).
+> **Estado del proyecto:** pipeline completo ejecutado de inicio a fin
+> sobre el dataset real de PaySim (notebooks 1-4). Resultados, hallazgos
+> de interpretabilidad y reportes de drift son reales (seccion
+> [f](#f-resultados--metricas-offline-y-online) en adelante). Por
+> limitaciones de computo del equipo de desarrollo, el entrenamiento usa
+> una submuestra representativa de la referencia (ver nota en la
+> seccion f) — la evaluacion online usa el 100% de produccion, sin
+> submuestrear.
 
 ---
 
@@ -165,21 +168,51 @@ limitaciones, consideraciones eticas).
 
 ## f. Resultados — metricas offline y online
 
-> ⏳ *Pendiente de poblar tras ejecutar
-> `notebooks/2.0-entrenamiento-modelo.ipynb` con el dataset real.*
+> **Nota de computo:** la referencia completa (`step <= 400`) tiene
+> ~5.79M filas. En el equipo de desarrollo de este proyecto (CPU movil
+> de 8 cores, ~14 GB RAM) una sola comparacion de balanceo con 5-fold CV
+> sobre ese volumen no termino tras mas de una hora (probable *memory
+> thrashing*). Se opto por una **submuestra estratificada de 1.8M filas**
+> de referencia (31% del total, misma tasa real de fraude via
+> `stratify`), y se recorto moderadamente el espacio de busqueda de
+> Random Search (`n_iter=10`, `n_estimators <= 400`) y el balanceo
+> (`StratifiedKFold` de 3 en vez de 5, 100 arboles en vez de 200 para esa
+> comparacion puntual). La **evaluacion online usa el 100% de produccion**
+> (575,590 filas), sin submuestrear. Detalle en
+> `notebooks/2.0-entrenamiento-modelo.ipynb` (celda de carga de datos).
 
-| Metrica | Offline (holdout, step ≤ 400) | Online (produccion, step > 400) |
-|---|---|---|
-| Accuracy | — | — |
-| Precision | — | — |
-| Recall | — | — |
-| F1 | — | — |
-| ROC-AUC | — | — |
-| PR-AUC | — | — |
-| Log loss | — | — |
+**Balanceo de clases** (comparacion 3-fold CV, tasa de fraude real ≈0.077%):
 
-Metrica principal recomendada: **PR-AUC** (mas informativa que ROC-AUC o
-accuracy bajo clases tan desbalanceadas).
+| Estrategia | Precision | Recall | F1 | PR-AUC | ROC-AUC |
+|---|---|---|---|---|---|
+| Original (sin balanceo) | 1.000 | 0.9946 | 0.9973 | 0.9961 | 0.9982 |
+| **Reweighing (elegida)** | 0.9844 | 0.9946 | 0.9894 | **0.9963** | 0.9989 |
+| Oversampling | 0.9947 | 0.9946 | 0.9946 | 0.9962 | 0.9988 |
+
+**Hiperparametros** elegidos por Random Search (XGBoost): `n_estimators=200`,
+`max_depth=3`, `learning_rate=0.05`, `subsample=0.6`, `colsample_bytree=0.8`,
+`min_child_weight=3`.
+
+**Modelo campeon (XGBoost) vs. baseline (Logistic Regression + Reweighing):**
+
+| Metrica | Baseline (offline) | XGBoost Offline (holdout, step ≤ 400) | XGBoost Online (produccion, step > 400) |
+|---|---|---|---|
+| Accuracy | 0.3397 | 0.99994 | 0.99996 |
+| Precision | 0.0012 | 0.9354 | 0.9987 |
+| Recall | 0.9892 | 0.9857 | 0.9949 |
+| F1 | 0.0023 | 0.9599 | 0.9968 |
+| ROC-AUC | 0.7638 | 0.9961 | 0.99997 |
+| PR-AUC | 0.0301 | 0.9857 | 0.9990 |
+| Log loss | 0.5575 | 0.00048 | 0.00039 |
+
+El baseline (regresion logistica + reweighing) logra recall alto pero
+precision inutilizable (~0.1%) — confirma que, bajo un desbalance tan
+extremo, un modelo lineal simple no alcanza; XGBoost + HPO + balanceo
+es lo que hace viable el caso de uso. **PR-AUC** es la metrica principal
+(mas informativa que accuracy/ROC-AUC bajo clases tan desbalanceadas); el
+desempeno **mejora** de offline a online (0.986 → 0.999 PR-AUC), pese a
+que produccion tiene una tasa de fraude ~8x mayor que referencia (ver
+seccion j) — el patron de fraude en si no cambio, solo su frecuencia.
 
 ## g. Interpretabilidad del modelo
 
@@ -193,16 +226,53 @@ Implementada en
   accionable** con DiCE (cambio minimo para pasar de "fraude" a
   "legitimo").
 
-> ⏳ *Hallazgos (features dominantes, consistencia SHAP/LIME) se
-> documentaran aqui tras correr el notebook con datos reales.*
+**Hallazgos (sobre una muestra de 20k filas de referencia):**
+
+- **Features dominantes (SHAP global)**: `errorBalanceOrig`,
+  `amountToOldBalanceOrgRatio` y `newbalanceOrig` — consistente con la
+  intuicion de negocio del Anexo 1 (inconsistencias de saldo y vaciado de
+  cuenta son la senal mas fuerte de fraude).
+- **Consistencia SHAP/LIME**: en el caso local analizado (verdadero
+  positivo), LIME coincide en que `amountToOldBalanceOrgRatio`,
+  `oldbalanceDest`/`newbalanceDest` altos y el tipo de transaccion son los
+  factores que mas empujan la prediccion hacia "fraude" — mismo grupo de
+  features que destaca SHAP a nivel global.
+- **Contrafactual (DiCE)**: para una transaccion `CASH_OUT` marcada como
+  fraude, el cambio minimo que la voltea a "legitima" es alterar
+  sustancialmente `errorBalanceOrig` (la inconsistencia de saldo) y, en
+  dos de tres contrafactuales, cambiar el tipo de transaccion a
+  `CASH_IN`/`TRANSFER` — refuerza que el modelo aprendio precisamente el
+  patron descrito en el Anexo 1 (toma de cuenta + vaciado via
+  `TRANSFER`/`CASH_OUT`), no una correlacion espuria.
 
 ## h. Conclusiones
 
-> ⏳ *Pendiente — completar tras entrenamiento, interpretabilidad y
-> monitoreo con el dataset real. Debe cubrir: desempeno alcanzado vs.
-> baseline, principales drivers del modelo, estabilidad en produccion
-> (drift) y recomendacion de estrategia de mantenimiento (retraining /
-> champion-challenger, Sesion 10).*
+- **Desempeno**: el modelo campeon (XGBoost + Random Search + Reweighing)
+  alcanza PR-AUC 0.986 offline y 0.999 online, muy por encima del baseline
+  lineal (PR-AUC 0.030) — confirma que, con un desbalance tan extremo
+  (~0.08% de fraude), hace falta un modelo no lineal bien afinado, no solo
+  balanceo de clases.
+- **Drivers del modelo**: consistentes con el negocio — inconsistencias de
+  saldo (`errorBalanceOrig`) y vaciado de cuenta
+  (`amountToOldBalanceOrgRatio`) dominan tanto a nivel global (SHAP) como
+  local (LIME, contrafactuales DiCE), y el contrafactual confirma que el
+  modelo aprendio el patron real de fraude del Anexo 1 (toma de cuenta +
+  `TRANSFER`/`CASH_OUT`), no una correlacion espuria.
+- **Estabilidad en produccion**: **no hay data drift** detectado en las 16
+  features de entrada (0/16 con Evidently `DataDriftPreset`) — pero **si
+  hay un target drift fuerte**: la tasa de fraude pasa de 0.077%
+  (referencia) a 0.649% (produccion), ~8.4x mas alta. Pese a eso, el
+  desempeno del modelo se mantiene estable y alto en los 10 bloques de
+  tiempo de produccion (PR-AUC entre 0.997 y 1.000, sin tendencia a la
+  baja) — el modelo generaliza bien porque el *patron* de fraude no
+  cambio, solo su frecuencia.
+- **Recomendacion de mantenimiento** (Sesion 10): dado que no hay
+  degradacion de desempeno pero si un cambio marcado en la tasa base de
+  fraude, la estrategia recomendada por ahora es **monitoreo activo del
+  target drift** (alertar si la tasa de fraude o el PR-AUC por bloque de
+  tiempo se desvian de los rangos observados) en vez de retraining
+  inmediato; un **esquema Champion-Challenger** seria el siguiente paso
+  natural si llegara a detectarse degradacion real de PR-AUC/recall.
 
 ## i. MLflow — experimentos
 
@@ -224,8 +294,12 @@ export MLFLOW_TRACKING_USERNAME=<usuario>
 export MLFLOW_TRACKING_PASSWORD=<token>
 ```
 
-> ⏳ *Link publico a DagsHub pendiente (actualmente corriendo tracking
-> local mientras se valida el pipeline).*
+> ⏳ *Link publico a DagsHub pendiente — por ahora el tracking corre
+> local (`mlflow.db`, no versionado en git). Los experimentos reales del
+> pipeline completo (comparacion de balanceo, baseline, Random Search,
+> modelo campeon con metricas offline/online) quedan registrados ahi;
+> correr `mlflow ui --backend-store-uri sqlite:///mlflow.db` para
+> inspeccionarlos.*
 
 ## j. Monitoreo y app de drift
 
@@ -239,6 +313,20 @@ export MLFLOW_TRACKING_PASSWORD=<token>
   con tabla de drift por feature (tipo, drift score, test estadistico,
   flag de deteccion), filtro por ventana de `step` y un **semaforo
   ejecutivo** (🟢/🟡/🔴) con el % de features con drift.
+
+**Resultados reales** (referencia 1.8M filas vs. produccion completa,
+575,590 filas):
+
+| Chequeo | Resultado |
+|---|---|
+| Data drift (16 features) | 🟢 **0/16** features con drift (`dataset_drift=False`) |
+| Target drift | 🔴 Tasa de fraude 0.077% → 0.649% (**~8.4x**) |
+| Performance drift (10 bloques de `step` en produccion) | 🟢 PR-AUC estable entre 0.997-1.000, sin tendencia a la baja |
+
+Ver detalle y graficos en
+[`notebooks/4.0-monitoreo-drift.ipynb`](notebooks/4.0-monitoreo-drift.ipynb)
+y los reportes HTML en `app/reports/` (generados localmente, no
+versionados por tamano — correr el notebook para regenerarlos).
 
 ```bash
 streamlit run app/monitoring_app.py

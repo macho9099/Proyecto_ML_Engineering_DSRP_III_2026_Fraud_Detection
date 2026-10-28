@@ -7,10 +7,11 @@ Formato inspirado en [Kaggle Model Cards](https://www.kaggle.com/code/var0101/mo
 | Campo | Valor |
 |---|---|
 | Desarrollado por | Juan Carlos Aguilar Alfaro — DataScienceResearchPeru, Especializacion MLE, Curso III |
-| Fecha | _(completar tras el entrenamiento final)_ |
+| Fecha | 2026-10-27 |
 | Tipo de modelo | `XGBClassifier` (gradient boosted trees), binario |
 | Version | v1.0.0 |
-| Hiperparametros | Optimizados con Random Search (`RandomizedSearchCV`) — ver `notebooks/2.0-entrenamiento-modelo.ipynb` y el experimento registrado en MLflow |
+| Hiperparametros | `n_estimators=200, max_depth=3, learning_rate=0.05, subsample=0.6, colsample_bytree=0.8, min_child_weight=3` — elegidos con Random Search (`RandomizedSearchCV`, Sesion 3) — ver `notebooks/2.0-entrenamiento-modelo.ipynb` y el experimento registrado en MLflow |
+| Balanceo de clases | Reweighing (Sesion 8) — ganador sobre Original y Oversampling en comparacion 3-fold CV |
 | Licencia | MIT (ver `LICENSE`) |
 
 ## 2. Uso previsto
@@ -26,17 +27,28 @@ Formato inspirado en [Kaggle Model Cards](https://www.kaggle.com/code/var0101/mo
 
 ## 3. Datos de entrenamiento y evaluacion
 
-- Dataset: PaySim (`PS_20174392719_1491204439457_log.csv`).
-- Entrenamiento/validacion offline: `step <= 400`.
-- Evaluacion online (produccion simulada): `step > 400`.
+- Dataset: PaySim (`PS_20174392719_1491204439457_log.csv`, 6.36M filas).
+- Entrenamiento/validacion offline: `step <= 400` — por limite de computo
+  del equipo de desarrollo se usa una submuestra estratificada de 1.8M de
+  las ~5.79M filas de referencia (misma tasa real de fraude, ~0.077%).
+- Evaluacion online (produccion simulada): `step > 400`, **100%** de las
+  575,590 filas (sin submuestrear).
 - Ver diccionario completo en [`data/README.md`](../data/README.md).
 
 ## 4. Metricas
 
-Ver tabla de resultados en el `README.md` principal (seccion *Resultados*).
-Se reporta **PR-AUC** como metrica principal (el target esta fuertemente
-desbalanceado, ROC-AUC puede ser optimista), ademas de precision, recall,
-F1, ROC-AUC y log loss, offline y online.
+| Metrica | Offline (holdout) | Online (produccion completa) |
+|---|---|---|
+| PR-AUC (principal) | 0.9857 | 0.9990 |
+| Recall | 0.9857 | 0.9949 |
+| Precision | 0.9354 | 0.9987 |
+| F1 | 0.9599 | 0.9968 |
+| ROC-AUC | 0.9961 | 0.99997 |
+
+Ver tabla completa (incluye accuracy/log loss y el baseline lineal) en el
+`README.md` principal (seccion *f. Resultados*). Se reporta **PR-AUC**
+como metrica principal (el target esta fuertemente desbalanceado, ~0.08%
+de fraude en referencia; ROC-AUC/accuracy pueden ser optimistas).
 
 ## 5. Consideraciones eticas y limitaciones
 
@@ -63,3 +75,10 @@ contrafactuales DiCE) en
 Data drift, target drift y degradacion de desempeno a lo largo del tiempo
 en [`notebooks/4.0-monitoreo-drift.ipynb`](../notebooks/4.0-monitoreo-drift.ipynb)
 y en la app [`app/monitoring_app.py`](../app/monitoring_app.py).
+
+**Hallazgo clave**: sin data drift en las features de entrada, pero con
+un target drift fuerte (tasa de fraude ~8.4x mayor en produccion que en
+referencia). El desempeno del modelo se mantiene estable pese a eso — se
+recomienda monitoreo activo de la tasa de fraude y el PR-AUC por ventana
+de tiempo en vez de retraining inmediato (ver seccion *h. Conclusiones*
+del README).
