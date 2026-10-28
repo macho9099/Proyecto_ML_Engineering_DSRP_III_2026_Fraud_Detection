@@ -24,7 +24,7 @@ import streamlit as st
 from evidently.legacy.metric_preset import DataDriftPreset
 from evidently.legacy.report import Report
 
-from src.config import PROCESSED_DIR, REFERENCE_DATA_PATH, TARGET_COL
+from src.config import PROCESSED_DIR, PROCESSED_DTYPES, REFERENCE_DATA_PATH, TARGET_COL
 from src.features import select_model_features
 from src.metrics import classification_metrics
 
@@ -33,9 +33,11 @@ st.set_page_config(page_title="Monitoreo — Fraud Detection", layout="wide")
 
 @st.cache_data
 def load_data():
-    reference = pd.read_csv(REFERENCE_DATA_PATH)
+    reference = pd.read_csv(REFERENCE_DATA_PATH, dtype=PROCESSED_DTYPES)
     scored_path = PROCESSED_DIR / "production_scored.csv"
-    production = pd.read_csv(scored_path if scored_path.exists() else PROCESSED_DIR / "production.csv")
+    production = pd.read_csv(
+        scored_path if scored_path.exists() else PROCESSED_DIR / "production.csv", dtype=PROCESSED_DTYPES
+    )
     return reference, production
 
 
