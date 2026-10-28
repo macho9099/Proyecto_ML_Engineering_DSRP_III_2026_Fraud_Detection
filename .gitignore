@@ -26,15 +26,17 @@ mlflow.db
 # --- Jupyter ---
 .ipynb_checkpoints/
 
-# --- Evidently / reportes generados pesados ---
-app/reports/*.html
-app/reports/*.png
+# --- Evidently / Reporte HTML del proyecto ---
+# Se versiona el reporte final real (pedido por el enunciado); si se
+# vuelve a correr el notebook de monitoreo con otra configuracion, estos
+# archivos cambian y se commitean de nuevo deliberadamente.
 !app/reports/.gitkeep
 
-# --- Artefactos de modelo y figuras regenerables (notebooks 2 y 3) ---
-artifacts/models/*.pkl
+# --- Artefactos de modelo y figuras del entregable final ---
+# El modelo campeon (fraud_model.pkl, ~224KB) y las figuras de
+# interpretabilidad (SHAP/LIME/matriz de confusion, unas decenas de KB
+# cada una) se versionan como evidencia del entregable final.
 !artifacts/models/.gitkeep
-reports/*.png
 !reports/.gitkeep
 
 # --- Credenciales / entorno ---
