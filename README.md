@@ -78,7 +78,7 @@ flowchart TD
         D4[Modelo campeon]
     end
 
-    subgraph MLF["MLflow (local -> opcional DagsHub)\nsrc/tracking.py"]
+    subgraph MLF["MLflow (local + DagsHub)\nsrc/tracking.py"]
         G1[Params + metricas offline/online]
         G2[Artefactos: modelo, matriz de confusion]
     end
@@ -276,6 +276,23 @@ Implementada en
 
 ## i. MLflow — experimentos
 
+**Experimentos publicos en DagsHub:**
+https://dagshub.com/jcotakushaka/Proyecto_ML_Engineering_DSRP_III_2026_Fraud_Detection.mlflow/#/experiments/0
+
+Ahi quedan registrados los 3 runs reales del pipeline completo (parametros,
+metricas y artefactos):
+
+- `class_balancing_comparison`: metricas de Original vs. Reweighing vs.
+  Oversampling (3-fold CV).
+- `baseline_logreg`: metricas offline del baseline lineal.
+- `champion_xgboost_random_search`: hiperparametros de Random Search,
+  metricas offline y online, y el **modelo** (`mlflow.xgboost.log_model`).
+
+Se registraron con [`scripts/log_results_to_mlflow.py`](scripts/log_results_to_mlflow.py)
+a partir de los resultados reales ya obtenidos en
+`notebooks/2.0-entrenamiento-modelo.ipynb` (evita tener que re-correr el
+entrenamiento solo para publicarlos).
+
 Tracking **local** por defecto (SQLite: el backend de archivos plano
 `./mlruns` quedo en modo mantenimiento desde MLflow 3.x):
 
@@ -284,22 +301,14 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
 El codigo (`src/tracking.py`) lee `MLFLOW_TRACKING_URI` desde el entorno,
-por lo que apuntar a un backend remoto (p.ej. **DagsHub**) para publicar
-los experimentos solo requiere exportar variables de entorno, sin tocar
-el codigo:
+por lo que apuntar a un backend remoto como DagsHub solo requiere exportar
+variables de entorno, sin tocar el codigo:
 
 ```bash
 export MLFLOW_TRACKING_URI=https://dagshub.com/<usuario>/<repo>.mlflow
 export MLFLOW_TRACKING_USERNAME=<usuario>
 export MLFLOW_TRACKING_PASSWORD=<token>
 ```
-
-> ⏳ *Link publico a DagsHub pendiente — por ahora el tracking corre
-> local (`mlflow.db`, no versionado en git). Los experimentos reales del
-> pipeline completo (comparacion de balanceo, baseline, Random Search,
-> modelo campeon con metricas offline/online) quedan registrados ahi;
-> correr `mlflow ui --backend-store-uri sqlite:///mlflow.db` para
-> inspeccionarlos.*
 
 ## j. Monitoreo y app de drift
 
